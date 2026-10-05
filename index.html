@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sinh Nhat Vui Ve</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Courier New', monospace;
+        }
+
+        body {
+            background-color: #000;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+
+        /* ----- Mưa số 0 1 ----- */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        /* ----- Nội dung chính (chữ chúc mừng + hạt sáng) ----- */
+        .content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            pointer-events: none; /* để click vào bóng bay dễ hơn, nhưng chữ vẫn nhìn thấy */
+        }
+
+        .birthday-title {
+            font-size: clamp(2rem, 10vw, 5.5rem);
+            font-weight: 900;
+            text-align: center;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #ff4dd0, #c44dff, #ff6ec7, #b84dff, #ff3caa);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 30px rgba(255, 77, 208, 0.7), 0 0 60px rgba(196, 77, 255, 0.5);
+            animation: gradientMove 3s ease infinite;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 15px #ff4dd0aa);
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* ----- Hạt sáng thiên hà (những đốm sáng nhỏ) ----- */
+        .galaxy-sparkles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .sparkle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #fff;
+            border-radius: 50%;
+            opacity: 0.8;
+            box-shadow: 0 0 10px #ff99ff, 0 0 20px #cc66ff, 0 0 30px #ff66cc;
+            animation: floatSparkle 6s infinite alternate ease-in-out;
+        }
+
+        @keyframes floatSparkle {
+            0% { transform: translateY(0) scale(1); opacity: 0.4; }
+            100% { transform: translateY(-40px) scale(1.8); opacity: 1; }
+        }
+
+        /* ----- Bóng bay ----- */
+        .balloon-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 20;
+            overflow: hidden;
+        }
+
+        .balloon {
+            position: absolute;
+            bottom: -150px;
+            width: 70px;
+            height: 90px;
+            background: radial-gradient(circle at 30% 30%, #ffb3ff, #cc33cc);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            box-shadow: 0 0 25px rgba(255, 100, 255, 0.8), inset -5px -5px 15px rgba(0,0,0,0.4);
+            cursor: pointer;
+            pointer-events: auto;
+            transition: transform 0.2s, filter 0.2s;
+            animation: floatUp 8s linear forwards;
+            will-change: transform;
+            border: 1px solid rgba(255, 200, 255, 0.6);
+        }
+
+        .balloon::after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 1px;
+        }
+
+        .balloon:hover {
+            transform: scale(1.1);
+            filter: brightness(1.4);
+        }
+
+        /* Màu bóng bay đa dạng */
+        .balloon[data-color="0"] { background: radial-gradient(circle at 30% 30%, #ffb3ff, #cc33cc); }
+        .balloon[data-color="1"] { background: radial-gradient(circle at 30% 30%, #a0f0ff, #3399cc); }
+        .balloon[data-color="2"] { background: radial-gradient(circle at 30% 30%, #ffd966, #cc7a00); }
+        .balloon[data-color="3"] { background: radial-gradient(circle at 30% 30%, #b3ffb3, #33aa33); }
+        .balloon[data-color="4"] { background: radial-gradient(circle at 30% 30%, #ffb3b3, #cc3333); }
+        .balloon[data-color="5"] { background: radial-gradient(circle at 30% 30%, #e6b3ff, #9933cc); }
+
+        @keyframes floatUp {
+            0% { bottom: -150px; opacity: 0.9; }
+            100% { bottom: 110%; opacity: 0.7; }
+        }
+
+        /* ----- GUI lời chúc (modal) ----- */
+        .gui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: auto;
+            transition: opacity 0.3s;
+        }
+
+        .gui-overlay.active {
+            display: flex;
+        }
+
+        .gui-box {
+            background: linear-gradient(145deg, #1a0b2e, #2a1040);
+            padding: 30px 40px;
+            border-radius: 30px;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 0 60px #b84dff, 0 0 120px #ff4dd0, inset 0 0 30px rgba(255, 200, 255, 0.3);
+            border: 2px solid rgba(255, 200, 255, 0.5);
+            color: #fff;
+            font-size: 1.5rem;
+            line-height: 1.5;
+            position: relative;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            word-break: break-word;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.7); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .gui-box p {
+            background: linear-gradient(135deg, #ffb3ff, #d9b3ff, #ffb3e6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 600;
+            text-shadow: 0 0 20px rgba(255, 100, 255, 0.5);
+            margin: 0;
+        }
+
+        .gui-close-hint {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #cc99ff;
+            opacity: 0.7;
+            letter-spacing: 1px;
+        }
+
+        /* Hiệu ứng cho chữ chúc mừng khi hạt sáng */
+        .glow-text {
+            position: relative;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .gui-box {
+                padding: 20px;
+                font-size: 1.2rem;
+            }
+            .balloon {
+                width: 55px;
+                height: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Mưa số 0 1 (matrix) -->
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- Hạt sáng thiên hà (tạo bằng JS) -->
+    <div class="galaxy-sparkles" id="sparkles-container"></div>
+
+    <!-- Chữ chúc mừng -->
+    <div class="content">
+        <div class="birthday-title">HAPPY BIRTHDAY</div>
+    </div>
+
+    <!-- Bóng bay sẽ được thêm vào đây -->
+    <div class="balloon-container" id="balloon-container"></div>
+
+    <!-- GUI lời chúc (modal) -->
+    <div class="gui-overlay" id="gui-overlay">
+        <div class="gui-box" id="gui-box">
+            <p id="wish-text">Lời chúc</p>
+            <div class="gui-close-hint">( Nhấn ra ngoài để đóng )</div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ==================== 1. MƯA SỐ 0 1 (MATRIX) ====================
+            const canvas = document.getElementById('matrix-canvas');
+            const ctx = canvas.getContext('2d');
+
+            let width, height;
+            let columns, drops;
+            const fontSize = 18;
+            const chars = "0101010101010"; // chuỗi số 0 và 1
+
+            function initMatrix() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+
+                columns = Math.floor(width / fontSize);
+                drops = new Array(columns).fill(1);
+
+                // Vẽ nền đen mỗi lần resize
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, width, height);
+            }
+
+            function drawMatrix() {
+                // Nền đen mờ để tạo vệt
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.font = fontSize + 'px "Courier New", monospace';
+                ctx.textAlign = 'center';
+
+                for (let i = 0; i < drops.length; i++) {
+                    // Lấy ký tự ngẫu nhiên từ chuỗi 0 1
+                    const char = chars[Math.floor(Math.random() * chars.length)];
+                    const x = i * fontSize + fontSize / 2;
+                    const y = drops[i] * fontSize;
+
+                    // Màu xanh lá cây (hacker)
+                    const green = 100 + Math.floor(Math.random() * 155);
+                    ctx.fillStyle = `rgb(0, ${green}, 0)`;
+                    ctx.shadowColor = '#0f0';
+                    ctx.shadowBlur = 8;
+
+                    ctx.fillText(char, x, y);
+                    ctx.shadowBlur = 0; // reset
+
+                    // Nếu cột vượt quá chiều cao thì reset
+                    if (y > height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+
+            // Khởi tạo và chạy matrix
+            initMatrix();
+            let matrixInterval = setInterval(drawMatrix, 50);
+
+            // Resize canvas
+            window.addEventListener('resize', () => {
+                initMatrix();
+                // Reset lại drops
+                drops = drops.map(() => Math.floor(Math.random() * -50));
+            });
+
+            // ==================== 2. HẠT SÁNG THIÊN HÀ ====================
+            const sparklesContainer = document.getElementById('sparkles-container');
+
+            function createSparkles(count = 100) {
+                for (let i = 0; i < count; i++) {
+                    const sparkle = document.createElement('div');
+                    sparkle.className = 'sparkle';
+                    const size = Math.random() * 4 + 2; // 2-6px
+                    sparkle.style.width = size + 'px';
+                    sparkle.style.height = size + 'px';
+                    sparkle.style.left = Math.random() * 100 + '%';
+                    sparkle.style.top = Math.random() * 100 + '%';
+                    sparkle.style.animationDelay = Math.random() * 6 + 's';
+                    sparkle.style.animationDuration = (Math.random() * 4 + 3) + 's';
+                    // Màu sắc khác nhau (hồng, tím, xanh)
+                    const colors = ['#ff99ff', '#cc99ff', '#ffccff', '#e6b3ff', '#ffb3e6'];
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    sparkle.style.background = color;
+                    sparkle.style.boxShadow = `0 0 15px ${color}, 0 0 30px ${color}`;
+                    sparklesContainer.appendChild(sparkle);
+                }
+            }
+            createSparkles(120);
+
+            // ==================== 3. BÓNG BAY + LỜI CHÚC ====================
+            const balloonContainer = document.getElementById('balloon-container');
+            const guiOverlay = document.getElementById('gui-overlay');
+            const wishText = document.getElementById('wish-text');
+
+            // Danh sách lời chúc (sẽ được dùng ngẫu nhiên không trùng)
+            const allWishes = [
+                "Chúc mừng sinh nhật! Chúc Lâm một tuổi mới rực rỡ và thành công! 🎂",
+                "Sinh nhật vui vẻ! Mong mọi điều tốt đẹp sẽ đến với Lâm! 🌟",
+                "Chúc Lâm gay tuổi mới tràn đầy sức khỏe, hạnh phúc và tiếng cười! 🎈",
+                "Happy Birthday! Chúc Lâm luôn tỏa sáng bá khí aura! ✨",
+                "Một tuổi mới an nhiên, may mắn và gặp thật nhiều điều tuyệt vời! 🍀",
+                "Chúc mừng sinh nhật! Hãy luôn là chính mình và đẳng cấp! 💖",
+                "Tuổi mới, niềm vui mới, thành công mới! Chúc mừng sinh nhật! 🎉",
+                "Hắp bi bớt đây, vạn sự như ý, kiến thức dồi dào, học đâu vào đấy! 💰",
+                "Mong rằng tuổi mới sẽ mang đến những điều kỳ diệu nhất! 🌈",
+                "Hắp bi bớt đây, Hắp bi bớt đây, Hắp bi bớt đây, Hắp bi bớt đây 🥰",
+                "Chúc Lâm luôn mạnh khỏe, bình an và hạnh phúc! 🕊️",
+                "Một ngày đặc biệt dành cho một người đặc biệt! Chúc mừng sinh nhật! 🎁",
+                "Chúc Lâm tuổi mới thật nhiều niềm vui, ít muộn phiền và luôn cười thật tươi! 😄",
+                "Sinh nhật vui vẻ! Chúc Lâm sớm đạt được mọi ước mơ! 🌠",
+                "Hắp bi gút đây! Chúc cho Lâm luôn tràn đầy năng lượng và đam mê! 🔥"
+            ];
+
+            // Lưu trữ những lời chúc chưa dùng (để không trùng)
+            let availableWishes = [...allWishes];
+
+            // Hàm lấy lời chúc ngẫu nhiên không trùng
+            function getRandomWish() {
+                if (availableWishes.length === 0) return null;
+                const randomIndex = Math.floor(Math.random() * availableWishes.length);
+                const wish = availableWishes[randomIndex];
+                // Xóa khỏi danh sách đã dùng
+                availableWishes.splice(randomIndex, 1);
+                return wish;
+            }
+
+            // Tạo bóng bay
+            function createBalloon() {
+                // Nếu không còn lời chúc nào -> không tạo bóng bay nữa
+                if (availableWishes.length === 0) return;
+
+                const balloon = document.createElement('div');
+                balloon.className = 'balloon';
+                // Màu ngẫu nhiên
+                balloon.setAttribute('data-color', Math.floor(Math.random() * 6));
+                // Vị trí ngẫu nhiên theo chiều ngang
+                const left = Math.random() * 90; // 0-90%
+                balloon.style.left = left + '%';
+                // Thời gian bay ngẫu nhiên (7-12 giây)
+                const duration = 7 + Math.random() * 5;
+                balloon.style.animationDuration = duration + 's';
+                // Delay ngẫu nhiên
+                balloon.style.animationDelay = Math.random() * 2 + 's';
+                // Kích thước ngẫu nhiên
+                const scale = 0.8 + Math.random() * 0.5;
+                balloon.style.transform = `scale(${scale})`;
+
+                // Gắn sự kiện click
+                balloon.addEventListener('click', function(e) {
+                    e.stopPropagation(); // tránh sự kiện lan ra overlay
+                    // Lấy lời chúc ngẫu nhiên (không trùng)
+                    const wish = getRandomWish();
+                    if (!wish) {
+                        // Nếu hết lời chúc, có thể ẩn bóng này đi
+                        balloon.style.opacity = '0';
+                        setTimeout(() => balloon.remove(), 300);
+                        return;
+                    }
+                    // Hiển thị GUI
+                    wishText.textContent = wish;
+                    guiOverlay.classList.add('active');
+
+                    // Xóa bóng bay này sau khi click (để không dùng lại lời chúc)
+                    balloon.style.opacity = '0';
+                    setTimeout(() => balloon.remove(), 300);
+                });
+
+                balloonContainer.appendChild(balloon);
+
+                // Tự động xóa bóng sau khi bay hết (animation kết thúc) để tránh tràn DOM
+                balloon.addEventListener('animationend', function() {
+                    if (balloon.parentNode) {
+                        balloon.remove();
+                    }
+                    // Nếu còn lời chúc, tạo bóng mới để bù vào
+                    if (availableWishes.length > 0) {
+                        // Chỉ tạo bù nếu số lượng bóng bay hiện tại ít hơn 8
+                        const currentBalloons = document.querySelectorAll('.balloon').length;
+                        if (currentBalloons < 8) {
+                            createBalloon();
+                        }
+                    }
+                });
+            }
+
+            // Hàm tạo nhiều bóng ban đầu
+            function initBalloons(count = 8) {
+                for (let i = 0; i < count; i++) {
+                    // Tạo bóng với delay khác nhau
+                    setTimeout(() => {
+                        if (availableWishes.length > 0) {
+                            createBalloon();
+                        }
+                    }, i * 400);
+                }
+            }
+
+            // Bắt đầu tạo bóng sau khi load
+            window.addEventListener('load', () => {
+                // Đảm bảo có 8 bóng ban đầu
+                initBalloons(8);
+                // Định kỳ thêm bóng mới nếu còn lời chúc và số lượng bóng ít
+                setInterval(() => {
+                    if (availableWishes.length > 0) {
+                        const currentBalloons = document.querySelectorAll('.balloon').length;
+                        if (currentBalloons < 8) {
+                            createBalloon();
+                        }
+                    }
+                }, 2000);
+            });
+
+            // ==================== 4. XỬ LÝ ĐÓNG GUI ====================
+            // Click ra ngoài (vào overlay) sẽ tắt GUI
+            guiOverlay.addEventListener('click', function(e) {
+                if (e.target === guiOverlay) {
+                    guiOverlay.classList.remove('active');
+                }
+            });
+
+            // Ngăn chặn click vào box làm tắt
+            document.getElementById('gui-box').addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            // (Tùy chọn) Nhấn ESC để tắt
+            window.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && guiOverlay.classList.contains('active')) {
+                    guiOverlay.classList.remove('active');
+                }
+            });
+
+            // ==================== 5. XỬ LÝ KHI HẾT LỜI CHÚC ====================
+            // Khi availableWishes hết, không tạo bóng mới, nhưng bóng cũ vẫn bay lên và biến mất.
+            // Không cần làm gì thêm.
+
+            // Dọn dẹp matrix interval nếu cần (không bắt buộc)
+            window.addEventListener('beforeunload', () => {
+                clearInterval(matrixInterval);
+            });
+
+        })();
+    </script>
+</body>
+</html>
